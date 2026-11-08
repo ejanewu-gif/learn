@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>備課小工具 - EJ的研習講義</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .admin-container {
+      max-width: 960px;
+      margin: 30px auto 60px;
+      padding: 0 20px;
+    }
+    .admin-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: var(--bg-primary);
+      color: var(--text-main);
+      outline: none;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+    .form-textarea {
+      min-height: 100px;
+      line-height: 1.5;
+      font-family: 'JetBrains Mono', 'Noto Sans TC', monospace;
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      background: var(--bg-surface);
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .item-list-box {
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 20px;
+      background: var(--bg-primary);
+    }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      gap: 14px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .status-public { background: var(--accent-emerald-bg); color: var(--accent-emerald); }
+    .status-protected { background: var(--accent-amber-bg); color: var(--accent-amber); }
+    .status-hidden { background: rgba(148, 163, 184, 0.2); color: #64748b; }
+    
+    /* 登入防護鎖 */
+    .admin-login-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .admin-login-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      max-width: 420px;
+      width: 100%;
+      padding: 32px;
+      text-align: center;
+      box-shadow: var(--shadow-xl);
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <!-- 講師管理密碼登入鎖 -->
+  <div class="admin-login-overlay" id="adminLoginOverlay">
+    <div class="admin-login-box">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 6px;">講師管理登入</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">請輸入管理主密碼以解鎖研習場次編輯器</p>
+      <form onsubmit="handleAdminLogin(event)">
+        <input type="password" id="adminPasswordInput" class="form-input" placeholder="請輸入管理主密碼" autofocus required style="text-align: center; margin-bottom: 16px; font-size: 1rem;">
+        <button type="submit" class="nav-btn primary" style="width: 100%; padding: 12px; font-weight: 700;">解鎖進入後台</button>
+      </form>
+      <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 14px;">（預設密碼為 <code>ej2026</code>，可於程式中自訂）</p>
+    </div>
+  </div>
+
+  <header class="site-nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="brand-badge">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        </div>
+        <div class="brand-text">
+          <h1>EJ的研習講義 備課小工具</h1>
+          <span>離線 JSON 資料產生與權限控制</span>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <button type="button" class="nav-btn" onclick="lockAdmin()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          重新上鎖
+        </button>
+        <a href="index.html" class="nav-btn primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          返回前台
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-container">
+    <!-- 下載與同步面板 -->
+    <div class="admin-card">
+      <h2 style="font-size: 1.35rem; font-weight: 800; margin-bottom: 8px;">🛠️ GitHub 靜態資料同步中心</h2>
+      <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px;">
+        在免伺服器架構中，所有場次、提示詞、狀態開關（公開/密碼/隱藏）、簡報連結都儲存在 <code>data/workshops.json</code> 中。<br>
+        在下方完成修改後，點擊<strong>「下載更新後的 workshops.json」</strong>覆蓋原本的檔案即可同步至前台！
+      </p>
+      <div class="btn-group">
+        <button type="button" class="nav-btn primary" onclick="exportCurrentJson()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          下載最新 workshops.json 檔案
+        </button>
+        <button type="button" class="nav-btn" onclick="document.getElementById('importFile').click()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          匯入本機 workshops.json
+        </button>
+        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImport(event)">
+      </div>
+    </div>
+
+    <!-- 研習場次快速管理 -->
+    <div class="admin-card">
+      <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 14px;">➕ 新增研習場次（含權限與簡報問卷設定）</h3>
+      <form id="workshopForm" onsubmit="saveNewWorkshop(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">研習日期 (YYYY-MM-DD)</label>
+            <input type="date" id="wDate" class="form-input" required value="2026-11-20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">星期 (如：週五)</label>
+            <input type="text" id="wDow" class="form-input" required value="週五">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">研習主題標題</label>
+          <input type="text" id="wTitle" class="form-input" placeholder="例：AI 融入校本課程與素養評量" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">副標題／特色摘要</label>
+          <input type="text" id="wSubtitle" class="form-input" placeholder="例：台江在地人文、柑仔蜜產業與生成式 AI 的深度融合">
+        </div>
+
+        <!-- 狀態權限與密碼 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: var(--bg-primary); padding: 14px; border-radius: var(--radius-md); margin-bottom: 18px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">場次公開狀態</label>
+            <select id="wStatus" class="form-select" onchange="togglePasscodeField(this.value)">
+              <option value="public">✨ 公開教材 (人人可瀏覽)</option>
+              <option value="protected">🔒 需通關密語 (需輸入密碼才解鎖)</option>
+              <option value="hidden">👁️ 完全隱藏 (前台首頁不顯示)</option>
+            </select>
+          </div>
+          <div class="form-group" id="passcodeGroup" style="margin-bottom: 0; display: none;">
+            <label class="form-label">設定通關密語（例：2026）</label>
+            <input type="text" id="wPasscode" class="form-input" placeholder="自訂通關密碼">
+          </div>
+        </div>
+
+        <!-- 簡報與回饋表單 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">📊 講義簡報連結 (URL)</label>
+            <input type="url" id="wSlideUrl" class="form-input" placeholder="https://docs.google.com/presentation/...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">📝 學員回饋問卷連結 (URL)</label>
+            <input type="url" id="wFeedbackUrl" class="form-input" placeholder="https://forms.google.com/...">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">研習地點</label>
+            <input type="text" id="wLocation" class="form-input" value="臺南市立南興國小 電腦教室">
+          </div>
+          <div class="form-group">
+            <label class="form-label">研習時段</label>
+            <input type="text" id="wDuration" class="form-input" value="13:30 - 16:30（3小時）">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">分類標籤（以半形逗點分隔）</label>
+          <input type="text" id="wCategories" class="form-input" value="全部, 常用網站, 教案備課, 評量命題, 學生學習單, 行政減負">
+        </div>
+
+        <button type="submit" class="nav-btn primary" style="width: 100%; padding: 12px; font-size: 0.95rem; font-weight: 700;">
+          新增此場次並加入預設 Prompt
+        </button>
+      </form>
+    </div>
+
+    <!-- 目前已有場次清單與狀態切換 -->
+    <div class="admin-card">
+      <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 14px;">📋 目前研習場次管理（可即時切換公開/隱藏）</h3>
+      <div id="workshopListContainer" class="item-list-box"></div>
+    </div>
+  </div>
+
+  <script>
+    let localData = [];
+    const ADMIN_PASSWORD_HASH = 'ej2026'; // 預設管理密碼
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      checkLoginState();
+      await loadInitialData();
+    });
+
+    function checkLoginState() {
+      const isLogged = sessionStorage.getItem('ej_admin_logged') === 'true';
+      const overlay = document.getElementById('adminLoginOverlay');
+      if (overlay) {
+        overlay.style.display = isLogged ? 'none' : 'flex';
+      }
+    }
+
+    function handleAdminLogin(e) {
+      e.preventDefault();
+      const input = document.getElementById('adminPasswordInput');
+      if (input.value === ADMIN_PASSWORD_HASH) {
+        sessionStorage.setItem('ej_admin_logged', 'true');
+        document.getElementById('adminLoginOverlay').style.display = 'none';
+      } else {
+        alert('管理密碼不正確！');
+        input.select();
+      }
+    }
+
+    function lockAdmin() {
+      sessionStorage.removeItem('ej_admin_logged');
+      checkLoginState();
+    }
+
+    async function loadInitialData() {
+      try {
+        const res = await fetch('data/workshops.json?v=' + Date.now());
+        localData = await res.json();
+      } catch (e) {
+        localData = [];
+      }
+      renderAdminList();
+    }
+
+    function togglePasscodeField(status) {
+      const field = document.getElementById('passcodeGroup');
+      if (field) {
+        field.style.display = status === 'protected' ? 'block' : 'none';
+      }
+    }
+
+    function renderAdminList() {
+      const container = document.getElementById('workshopListContainer');
+      if (!localData.length) {
+        container.innerHTML = '<p style="color:var(--text-muted); text-align:center;">目前無資料</p>';
+        return;
+      }
+      container.innerHTML = localData.map((w, idx) => {
+        let statusBadge = '<span class="status-badge status-public">公開</span>';
+        if (w.status === 'protected') {
+          statusBadge = `<span class="status-badge status-protected">🔒 密碼: ${w.passcode || '未設'}</span>`;
+        } else if (w.status === 'hidden') {
+          statusBadge = '<span class="status-badge status-hidden">👁️ 已隱藏</span>';
+        }
+
+        return `
+          <div class="item-row">
+            <div style="flex: 1;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <strong>${w.date} (${w.dayOfWeek})</strong> - ${w.title}
+                ${statusBadge}
+              </div>
+              <div style="font-size:0.82rem; color:var(--text-muted);">
+                ${w.resources ? w.resources.length : 0} 項教材・
+                簡報: ${w.slideUrl ? '✅ 已附' : '❌ 無'}・
+                問卷: ${w.feedbackUrl ? '✅ 已附' : '❌ 無'}
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items: center;">
+              <!-- 狀態快速切換 -->
+              <select onchange="updateWorkshopStatus(${idx}, this.value)" class="form-select" style="padding: 6px 10px; font-size: 0.8rem; width: auto;">
+                <option value="public" ${w.status === 'public' ? 'selected' : ''}>公開</option>
+                <option value="protected" ${w.status === 'protected' ? 'selected' : ''}>需密碼</option>
+                <option value="hidden" ${w.status === 'hidden' ? 'selected' : ''}>隱藏</option>
+              </select>
+              <button class="nav-btn" onclick="deleteWorkshop(${idx})" style="color:var(--accent-rose); border-color:var(--accent-rose); padding: 5px 10px; font-size: 0.8rem;">刪除</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateWorkshopStatus(idx, newStatus) {
+      localData[idx].status = newStatus;
+      if (newStatus === 'protected' && !localData[idx].passcode) {
+        const pass = prompt('請為此場次設定通關密語：', '2026');
+        if (pass) localData[idx].passcode = pass.trim();
+      }
+      renderAdminList();
+      alert(`已將該場次狀態改為【${newStatus}】！記得點擊「下載最新 workshops.json」檔案儲存變更。`);
+    }
+
+    function saveNewWorkshop(e) {
+      e.preventDefault();
+      const date = document.getElementById('wDate').value;
+      const dow = document.getElementById('wDow').value;
+      const title = document.getElementById('wTitle').value;
+      const subtitle = document.getElementById('wSubtitle').value;
+      const status = document.getElementById('wStatus').value;
+      const passcode = document.getElementById('wPasscode').value.trim();
+      const slideUrl = document.getElementById('wSlideUrl').value.trim();
+      const feedbackUrl = document.getElementById('wFeedbackUrl').value.trim();
+      const location = document.getElementById('wLocation').value;
+      const duration = document.getElementById('wDuration').value;
+      const cats = document.getElementById('wCategories').value.split(',').map(c => c.trim()).filter(Boolean);
+
+      const dObj = new Date(date);
+      const monthText = (dObj.getMonth() + 1) + '月';
+      const dayText = String(dObj.getDate());
+
+      const newWorkshop = {
+        id: `workshop-${date}`,
+        date: date,
+        dayOfWeek: dow,
+        monthText: monthText,
+        dayText: dayText,
+        isLatest: true,
+        status: status,
+        passcode: passcode,
+        title: title,
+        subtitle: subtitle,
+        location: location,
+        duration: duration,
+        slideUrl: slideUrl,
+        feedbackUrl: feedbackUrl,
+        description: subtitle,
+        categories: cats,
+        resources: [
+          {
+            id: `res-${Date.now()}-1`,
+            type: "tool",
+            category: "常用網站",
+            stage: "環境準備",
+            title: "Google Gemini 官方工作台",
+            desc: "長文本理解與教案生成助手",
+            url: "https://gemini.google.com/",
+            buttonText: "開啟 Gemini"
+          },
+          {
+            id: `res-${Date.now()}-2`,
+            type: "prompt",
+            category: "教案備課",
+            stage: "第一階段：教學設計",
+            stepNumber: 1,
+            title: "素養導向教案架構生成器",
+            practiceTimeMinutes: 5,
+            desc: "依據 108 課綱快速生成教學歷程與學習表現",
+            prompt: "請為【國小三年級】設計一堂【生活中的在地文化探究】教案。",
+            tips: "修改【年級】與【單元】"
+          }
+        ]
+      };
+
+      localData.forEach(w => w.isLatest = false);
+      localData.unshift(newWorkshop);
+      renderAdminList();
+      alert('已成功新增此場次！請點擊「下載最新 workshops.json」覆蓋原有檔案即可生效。');
+    }
+
+    function deleteWorkshop(idx) {
+      if (confirm('確定要移除此研習場次嗎？')) {
+        localData.splice(idx, 1);
+        renderAdminList();
+      }
+    }
+
+    function exportCurrentJson() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "workshops.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function handleImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          localData = JSON.parse(e.target.result);
+          renderAdminList();
+          alert('成功匯入！');
+        } catch (err) {
+          alert('JSON 解析失敗，請確認檔案格式是否正確。');
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>

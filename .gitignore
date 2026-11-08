@@ -1,0 +1,15 @@
+# 忽略臨時抓取分析暫存檔
+page_dump.html
+page_raw.bin
+page_utf8.html
+date_detail.html
+index_clean.html
+parse_page.py
+analysis_summary.txt
+admin.php
+assets_css_style.css
+assets_js_app.js
+
+# 作業系統暫存
+.DS_Store
+Thumbs.db
